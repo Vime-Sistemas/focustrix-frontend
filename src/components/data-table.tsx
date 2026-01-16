@@ -38,21 +38,21 @@ export function DataTable<T extends { id: string | number }>({
   action,
 }: DataTableProps<T>) {
   return (
-    <Card className="mb-8">
-      <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <CardTitle>{title}</CardTitle>
+    <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden">
+      <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100 bg-white px-6 py-4">
+        <div className="space-y-0.5">
+          <CardTitle className="text-base font-semibold text-slate-900">{title}</CardTitle>
           {description ? <p className="text-sm text-slate-500">{description}</p> : null}
         </div>
         {action}
       </CardHeader>
       <CardContent className="p-0">
-        <div className="overflow-hidden">
+        <div className="relative w-full overflow-auto">
           <Table>
-            <TableHeader>
-              <TableRow>
+            <TableHeader className="bg-slate-50/50">
+              <TableRow className="hover:bg-transparent border-slate-100">
                 {columns.map((col) => (
-                  <TableHead key={String(col.key)} className={cn("text-slate-600", col.className)}>
+                  <TableHead key={String(col.key)} className={cn("h-10 text-xs font-semibold uppercase tracking-wide text-slate-500", col.className)}>
                     {col.header}
                   </TableHead>
                 ))}
@@ -60,26 +60,30 @@ export function DataTable<T extends { id: string | number }>({
             </TableHeader>
             <TableBody>
               {loading ? (
-                [...Array(5)].map((_, idx) => (
-                  <TableRow key={idx}>
+                [...Array(3)].map((_, idx) => (
+                  <TableRow key={idx} className="border-slate-100">
                     {columns.map((col) => (
-                      <TableCell key={String(col.key)}>
-                        <Skeleton className="h-4 w-full" />
+                      <TableCell key={String(col.key)} className="py-3">
+                        <Skeleton className="h-4 w-[80%] bg-slate-100" />
                       </TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : data.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="text-center text-sm text-slate-500">
-                    {empty || "Nenhum registro"}
+                  <TableCell colSpan={columns.length} className="h-32 text-center text-sm text-slate-500">
+                    {empty || (
+                        <div className="flex flex-col items-center justify-center gap-1 py-6">
+                            <span className="text-slate-400">Nenhum registro encontrado</span>
+                        </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ) : (
                 data.map((item) => (
-                  <TableRow key={item.id}>
+                  <TableRow key={item.id} className="border-slate-100 transition-colors hover:bg-emerald-50/30">
                     {columns.map((col) => (
-                      <TableCell key={String(col.key)} className={col.className}>
+                      <TableCell key={String(col.key)} className={cn("py-3 text-sm text-slate-600", col.className)}>
                         {col.render ? col.render(item) : (item[col.key] as ReactNode)}
                       </TableCell>
                     ))}

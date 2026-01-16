@@ -1,11 +1,11 @@
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
+import { Card, CardContent } from "@/components/ui/card"
 import { AppShell } from "@/components/app-shell"
 import { DataTable, type Column } from "@/components/data-table"
 import { PageHeader } from "@/components/page-header"
+import { Building2, Users, Briefcase, CheckSquare } from "lucide-react"
 
 export type NavValue = "accounts" | "contacts" | "deals" | "tasks"
 
@@ -21,7 +21,7 @@ type Task = { id: string; title: string; status: string; due?: string; assignee:
 const navItems = [
   { label: "Contas", value: "accounts" },
   { label: "Contatos", value: "contacts" },
-  { label: "Negocios", value: "deals" },
+  { label: "Negócios", value: "deals" },
   { label: "Tarefas", value: "tasks" },
 ]
 
@@ -29,132 +29,104 @@ export function CrmPage({ selectedOrg }: CrmPageProps) {
   const [active, setActive] = useState<NavValue>("accounts")
   const [loading, setLoading] = useState(true)
 
-  const accounts: Account[] = useMemo(
-    () => [
-      { id: "1", name: "Acme Cloud", domain: "acme.dev", industry: "SaaS", owner: "Joao" },
-      { id: "2", name: "Nova AI", domain: "nova.ai", industry: "AI", owner: "Maria" },
-    ],
-    [],
-  )
+  // Mock Data
+  const accounts: Account[] = useMemo(() => [
+    { id: "1", name: "Acme Cloud", domain: "acme.dev", industry: "SaaS", owner: "João" },
+    { id: "2", name: "Nova AI", domain: "nova.ai", industry: "AI", owner: "Maria" },
+    { id: "3", name: "CyberSec", domain: "cyber.io", industry: "Security", owner: "Pedro" },
+  ], [])
 
-  const contacts: Contact[] = useMemo(
-    () => [
-      { id: "1", name: "Ana Silva", email: "ana@acme.dev", phone: "+55 11 99999-0000", account: "Acme Cloud" },
-      { id: "2", name: "Bruno Lima", email: "bruno@nova.ai", phone: "+55 21 98888-0000", account: "Nova AI" },
-    ],
-    [],
-  )
+  const contacts: Contact[] = useMemo(() => [
+    { id: "1", name: "Ana Silva", email: "ana@acme.dev", phone: "+55 11 99999-0000", account: "Acme Cloud" },
+    { id: "2", name: "Bruno Lima", email: "bruno@nova.ai", phone: "+55 21 98888-0000", account: "Nova AI" },
+  ], [])
 
-  const deals: Deal[] = useMemo(
-    () => [
-      { id: "1", name: "Contrato Enterprise", amount: "R$ 120.000", stage: "Proposta", owner: "Joao" },
-      { id: "2", name: "Renovacao 2025", amount: "R$ 80.000", stage: "Discovery", owner: "Maria" },
-    ],
-    [],
-  )
+  const deals: Deal[] = useMemo(() => [
+    { id: "1", name: "Contrato Enterprise", amount: "R$ 120.000", stage: "Proposta", owner: "João" },
+    { id: "2", name: "Renovação 2025", amount: "R$ 80.000", stage: "Discovery", owner: "Maria" },
+  ], [])
 
-  const tasks: Task[] = useMemo(
-    () => [
-      { id: "1", title: "Enviar proposta", status: "IN_PROGRESS", due: "Hoje", assignee: "Joao" },
-      { id: "2", title: "Agendar demo", status: "TODO", due: "Amanha", assignee: "Maria" },
-    ],
-    [],
-  )
+  const tasks: Task[] = useMemo(() => [
+    { id: "1", title: "Enviar proposta técnica", status: "IN_PROGRESS", due: "Hoje", assignee: "João" },
+    { id: "2", title: "Agendar demo produto", status: "TODO", due: "Amanhã", assignee: "Maria" },
+    { id: "3", title: "Follow-up CTO", status: "DONE", due: "Ontem", assignee: "João" },
+  ], [])
 
-  // Simulate loading
-  useMemo(() => {
-    const timer = setTimeout(() => setLoading(false), 500)
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 600)
     return () => clearTimeout(timer)
   }, [])
 
+  // Columns Definitions
   const accountColumns: Column<Account>[] = [
-    { key: "name", header: "Nome" },
-    { key: "domain", header: "Dominio" },
-    { key: "industry", header: "Industria" },
-    { key: "owner", header: "Dono" },
+    { key: "name", header: "Nome", className: "font-medium text-slate-900" },
+    { key: "domain", header: "Domínio", render: (i) => <span className="text-emerald-600 hover:underline cursor-pointer">{i.domain}</span> },
+    { key: "industry", header: "Indústria" },
+    { key: "owner", header: "Owner" },
   ]
 
   const contactColumns: Column<Contact>[] = [
-    { key: "name", header: "Nome" },
+    { key: "name", header: "Nome", className: "font-medium text-slate-900" },
     { key: "email", header: "Email" },
     { key: "phone", header: "Telefone" },
-    { key: "account", header: "Conta" },
+    { key: "account", header: "Conta Associada" },
   ]
 
   const dealColumns: Column<Deal>[] = [
-    { key: "name", header: "Negocio" },
-    { key: "amount", header: "Valor" },
-    {
-      key: "stage",
-      header: "Etapa",
-      render: (item) => <Badge variant="outline">{item.stage}</Badge>,
+    { key: "name", header: "Negócio", className: "font-medium text-slate-900" },
+    { key: "amount", header: "Valor", className: "font-medium" },
+    { 
+      key: "stage", 
+      header: "Etapa", 
+      render: (item) => (
+        <Badge variant="outline" className="bg-slate-50 border-slate-200 text-slate-700 font-normal">
+          {item.stage}
+        </Badge>
+      ) 
     },
-    { key: "owner", header: "Dono" },
+    { key: "owner", header: "Owner" },
   ]
 
   const taskColumns: Column<Task>[] = [
-    { key: "title", header: "Tarefa" },
+    { key: "title", header: "Tarefa", className: "font-medium text-slate-900" },
     {
       key: "status",
       header: "Status",
-      render: (item) => (
-        <Badge variant={item.status === "DONE" ? "default" : "secondary"}>{item.status}</Badge>
-      ),
+      render: (item) => {
+        const styles = {
+          "IN_PROGRESS": "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100",
+          "TODO": "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200",
+          "DONE": "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+        }
+        return <Badge variant="outline" className={`border ${styles[item.status as keyof typeof styles]}`}>{item.status.replace('_', ' ')}</Badge>
+      },
     },
     { key: "due", header: "Vencimento" },
-    { key: "assignee", header: "Responsavel" },
+    { key: "assignee", header: "Responsável" },
   ]
 
   const renderTable = () => {
+    const props = { loading }
     switch (active) {
       case "accounts":
-        return (
-          <DataTable
-            title="Contas"
-            description="Organizacoes que voce acompanha."
-            columns={accountColumns}
-            data={accounts}
-            loading={loading}
-            action={<Button size="sm">Nova conta</Button>}
-          />
-        )
+        return <DataTable title="Contas" description="Base de clientes e prospects." columns={accountColumns} data={accounts} action={<Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white">Nova conta</Button>} {...props} />
       case "contacts":
-        return (
-          <DataTable
-            title="Contatos"
-            description="Pessoas-chave das contas."
-            columns={contactColumns}
-            data={contacts}
-            loading={loading}
-            action={<Button size="sm">Novo contato</Button>}
-          />
-        )
+        return <DataTable title="Contatos" description="Stakeholders e decisores." columns={contactColumns} data={contacts} action={<Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white">Novo contato</Button>} {...props} />
       case "deals":
-        return (
-          <DataTable
-            title="Negocios"
-            description="Oportunidades em andamento."
-            columns={dealColumns}
-            data={deals}
-            loading={loading}
-            action={<Button size="sm">Novo negocio</Button>}
-          />
-        )
+        return <DataTable title="Pipeline" description="Oportunidades ativas." columns={dealColumns} data={deals} action={<Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white">Novo negócio</Button>} {...props} />
       case "tasks":
-        return (
-          <DataTable
-            title="Tarefas"
-            description="Acoes pendentes."
-            columns={taskColumns}
-            data={tasks}
-            loading={loading}
-            action={<Button size="sm">Nova tarefa</Button>}
-          />
-        )
-      default:
-        return null
+        return <DataTable title="Minhas Tarefas" description="Atividades pendentes." columns={taskColumns} data={tasks} action={<Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white">Nova tarefa</Button>} {...props} />
+      default: return null
     }
   }
+
+  // KPI Statistics for the top cards
+  const stats = [
+    { label: "Contas Ativas", value: accounts.length, icon: Building2 },
+    { label: "Contatos", value: contacts.length, icon: Users },
+    { label: "Pipeline Total", value: "R$ 200k", icon: Briefcase },
+    { label: "Tarefas Pendentes", value: tasks.filter(t => t.status !== 'DONE').length, icon: CheckSquare },
+  ]
 
   return (
     <AppShell
@@ -164,29 +136,32 @@ export function CrmPage({ selectedOrg }: CrmPageProps) {
       onQuickCreate={(type) => console.log("quick create", type)}
     >
       <PageHeader
-        title="CRM focado em tecnologia"
-        description={selectedOrg ? `Organizacao: ${selectedOrg}` : "Visao consolidada de contas, contatos, negocios e tarefas."}
-        className="mb-6"
+        title="Dashboard"
+        description={selectedOrg ? `Organização: ${selectedOrg}` : "Visão geral de performance e atividades."}
+        className="mb-8"
       >
-        <Card className="mt-4">
-          <CardHeader className="pb-2">
-            <CardTitle>Resumo rapido</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {["Contas", "Contatos", "Negocios", "Tarefas"].map((label) => (
+        <Card className="mt-6 border-slate-200 shadow-sm bg-white">
+          <CardContent className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
+            {stats.map((stat) => (
               <div
-                key={label}
-                className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-4 py-3 shadow-sm"
+                key={stat.label}
+                className="group relative flex items-start justify-between rounded-lg border border-slate-100 bg-slate-50/50 p-4 transition-all hover:bg-white hover:shadow-md hover:border-emerald-100"
               >
-                <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
-                <p className="mt-1 text-2xl font-semibold text-slate-900">{loading ? "--" : "em andamento"}</p>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-slate-500">{stat.label}</p>
+                  <p className="text-2xl font-bold text-slate-900 tracking-tight">
+                    {loading ? <span className="animate-pulse bg-slate-200 text-transparent rounded">--</span> : stat.value}
+                  </p>
+                </div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white border border-slate-200 text-emerald-500 shadow-sm group-hover:border-emerald-200 group-hover:bg-emerald-50">
+                  <stat.icon size={18} />
+                </div>
               </div>
             ))}
           </CardContent>
         </Card>
       </PageHeader>
 
-      <Separator className="mb-6" />
       {renderTable()}
     </AppShell>
   )
