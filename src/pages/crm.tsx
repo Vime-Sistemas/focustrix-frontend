@@ -2,7 +2,13 @@ import { useMemo, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { AppShell } from "@/components/app-shell"
 import { PageHeader } from "@/components/page-header"
-import { Building2, Users, Briefcase, CheckSquare } from "lucide-react"
+import {
+  Building2,
+  Users,
+  Briefcase,
+  CheckSquare,
+  KanbanSquare,
+} from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import type { ApiRequest } from "@/lib/api"
 import {
@@ -27,22 +33,28 @@ import { TaskForm, toTaskInitial } from "@/features/crm/tasks/task-form"
 import { TaskTable } from "@/features/crm/tasks/task-table"
 import { DeleteConfirmDialog } from "@/features/crm/shared/delete-confirm-dialog"
 import { formatCurrency, toNumber, type Option } from "@/features/crm/shared/utils"
+import { SettingsPage as ProfilePage } from "@/features/settings/settings-page"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 
 export type NavValue = "accounts" | "contacts" | "deals" | "tasks"
 
 export interface CrmPageProps {
   selectedOrg?: string
   apiRequest: ApiRequest
+  onSessionUpdate?: (session: { accessToken: string; refreshToken: string; user: { id: string; email: string } }) => void
+  onLogout?: () => void
+  user?: { id: string; email: string }
 }
 
+// Configuração atualizada com ÍCONES
 const navItems = [
-  { label: "Contas", value: "accounts" },
-  { label: "Contatos", value: "contacts" },
-  { label: "Negócios", value: "deals" },
-  { label: "Tarefas", value: "tasks" },
+  { label: "Contas", value: "accounts", icon: Building2 },
+  { label: "Contatos", value: "contacts", icon: Users },
+  { label: "Negócios", value: "deals", icon: KanbanSquare },
+  { label: "Tarefas", value: "tasks", icon: CheckSquare },
 ]
 
-export function CrmPage({ selectedOrg, apiRequest }: CrmPageProps) {
+export function CrmPage({ selectedOrg, apiRequest, onSessionUpdate, onLogout, user }: CrmPageProps) {
   const [active, setActive] = useState<NavValue>("accounts")
   const [dialog, setDialog] = useState<{ type: NavValue; mode: "create" | "edit"; id?: string } | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
@@ -52,6 +64,7 @@ export function CrmPage({ selectedOrg, apiRequest }: CrmPageProps) {
   const [stageFormError, setStageFormError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ type: NavValue; id: string } | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
   const enabled = Boolean(selectedOrg)
 
   const accountsQuery = useAccounts({ apiRequest, enabled })
@@ -176,6 +189,9 @@ export function CrmPage({ selectedOrg, apiRequest }: CrmPageProps) {
       active={active}
       onNavChange={(value) => setActive(value as NavValue)}
       onQuickCreate={(type) => setDialog({ type: type === "contact" ? "contacts" : "deals", mode: "create" })}
+      onProfileClick={() => setProfileOpen(true)}
+      onLogout={onLogout}
+      userEmail={user?.email}
     >
       <PageHeader
         title="Dashboard"
@@ -204,55 +220,80 @@ export function CrmPage({ selectedOrg, apiRequest }: CrmPageProps) {
         </Card>
       </PageHeader>
 
-      {active === "accounts" && (
-        <AccountTable
-          data={accountsQuery.data}
-          loading={accountsQuery.loading}
-          error={accountsQuery.error}
-          onCreate={() => setDialog({ type: "accounts", mode: "create" })}
-          onEdit={(id) => setDialog({ type: "accounts", mode: "edit", id })}
-          onDelete={(id) => requestDelete("accounts", id)}
-        />
-      )}
-      {active === "contacts" && (
-        <ContactTable
-          data={contactsQuery.data}
-          loading={contactsQuery.loading}
-          error={contactsQuery.error}
-          onCreate={() => setDialog({ type: "contacts", mode: "create" })}
-          onEdit={(id) => setDialog({ type: "contacts", mode: "edit", id })}
-          onDelete={(id) => requestDelete("contacts", id)}
-        />
-      )}
-      {active === "deals" && (
-        <DealTable
-          data={dealsQuery.data}
-          stageLookup={stageLookup}
-          loading={dealsQuery.loading || stagesQuery.loading}
-          error={dealsQuery.error || stagesQuery.error}
-          onCreate={() => setDialog({ type: "deals", mode: "create" })}
-          onEdit={(id) => setDialog({ type: "deals", mode: "edit", id })}
-          onDelete={(id) => requestDelete("deals", id)}
-        />
-      )}
-      {active === "tasks" && (
-        <TaskTable
-          data={tasksQuery.data}
-          loading={tasksQuery.loading}
-          error={tasksQuery.error}
-          onCreate={() => setDialog({ type: "tasks", mode: "create" })}
-          onEdit={(id) => setDialog({ type: "tasks", mode: "edit", id })}
-          onDelete={(id) => requestDelete("tasks", id)}
-        />
-      )}
+      <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+        {active === "accounts" && (
+            <AccountTable
+            data={accountsQuery.data}
+            loading={accountsQuery.loading}
+            error={accountsQuery.error}
+            onCreate={() => setDialog({ type: "accounts", mode: "create" })}
+            onEdit={(id) => setDialog({ type: "accounts", mode: "edit", id })}
+            onDelete={(id) => requestDelete("accounts", id)}
+            />
+        )}
+        {active === "contacts" && (
+            <ContactTable
+            data={contactsQuery.data}
+            loading={contactsQuery.loading}
+            error={contactsQuery.error}
+            onCreate={() => setDialog({ type: "contacts", mode: "create" })}
+            onEdit={(id) => setDialog({ type: "contacts", mode: "edit", id })}
+            onDelete={(id) => requestDelete("contacts", id)}
+            />
+        )}
+        {active === "deals" && (
+            <DealTable
+            data={dealsQuery.data}
+            stageLookup={stageLookup}
+            loading={dealsQuery.loading || stagesQuery.loading}
+            error={dealsQuery.error || stagesQuery.error}
+            onCreate={() => setDialog({ type: "deals", mode: "create" })}
+            onEdit={(id) => setDialog({ type: "deals", mode: "edit", id })}
+            onDelete={(id) => requestDelete("deals", id)}
+            />
+        )}
+        {active === "tasks" && (
+            <TaskTable
+            data={tasksQuery.data}
+            loading={tasksQuery.loading}
+            error={tasksQuery.error}
+            onCreate={() => setDialog({ type: "tasks", mode: "create" })}
+            onEdit={(id) => setDialog({ type: "tasks", mode: "edit", id })}
+            onDelete={(id) => requestDelete("tasks", id)}
+            />
+        )}
+      </div>
+
+      <Sheet open={profileOpen} onOpenChange={setProfileOpen}>
+        <SheetContent side="right" className="w-full border-l border-slate-200 bg-white sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle>Perfil</SheetTitle>
+            <SheetDescription>Dados pessoais e segurança da conta.</SheetDescription>
+          </SheetHeader>
+          <div className="h-full overflow-y-auto px-1 pb-6">
+            <ProfilePage
+              apiRequest={apiRequest}
+              onPasswordReset={(session) => {
+                if (onSessionUpdate) onSessionUpdate(session)
+                else if (onLogout) onLogout()
+              }}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Dialog open={Boolean(dialog)} onOpenChange={(open) => (!open ? closeDialog() : null)}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           {dialog ? (
             <>
               <DialogHeader>
-                <DialogTitle>{dialog.mode === "create" ? "Criar" : "Editar"} {labelFor(dialog.type)}</DialogTitle>
-                <DialogDescription>Preencha os campos abaixo.</DialogDescription>
+                <div className="flex items-center gap-2">
+                    <div className="h-8 w-1 bg-emerald-500 rounded-full" />
+                    <div>
+                        <DialogTitle>{dialog.mode === "create" ? "Criar" : "Editar"} {labelFor(dialog.type)}</DialogTitle>
+                        <DialogDescription>Preencha os detalhes abaixo para salvar.</DialogDescription>
+                    </div>
+                </div>
               </DialogHeader>
 
               {dialog.type === "accounts" && (

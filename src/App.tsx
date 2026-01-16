@@ -66,6 +66,14 @@ function App() {
     setStage("login");
   }, [persistTokens, persistOrg]);
 
+  const handleSessionUpdate = useCallback(
+    (session: { accessToken: string; refreshToken: string; user: AuthUser }) => {
+      persistTokens(session.accessToken, session.refreshToken);
+      setUser(session.user);
+    },
+    [persistTokens],
+  );
+
   const authHeaders = useCallback(
     (tokenOverride?: string | null, withOrg?: boolean) => {
       const headers: Record<string, string> = {};
@@ -332,7 +340,7 @@ function App() {
     );
   }
 
-  return <CrmPage selectedOrg={selectedOrg} apiRequest={apiRequest} />;
+  return <CrmPage selectedOrg={selectedOrg} apiRequest={apiRequest} onSessionUpdate={handleSessionUpdate} onLogout={clearAuth} user={user ?? undefined} />;
 }
 
 export default App;
