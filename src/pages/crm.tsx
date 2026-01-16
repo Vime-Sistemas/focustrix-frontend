@@ -255,6 +255,9 @@ export function CrmPage({ selectedOrg, apiRequest, onSessionUpdate, onLogout, us
         {active === "tasks" && (
             <TaskTable
             data={tasksQuery.data}
+            accounts={accountsQuery.data}
+            contacts={contactsQuery.data}
+            deals={dealsQuery.data}
             loading={tasksQuery.loading}
             error={tasksQuery.error}
             onCreate={() => setDialog({ type: "tasks", mode: "create" })}

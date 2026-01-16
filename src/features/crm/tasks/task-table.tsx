@@ -29,14 +29,17 @@ import {
   User,
   Plus
 } from "lucide-react"
-import type { TaskDto } from "@/hooks/use-crm-resources"
+import type { TaskDto, AccountDto, ContactDto, DealDto } from "@/hooks/use-crm-resources"
 import { formatDate } from "../shared/utils"
 
-// Extensão do tipo para facilitar renderização
-type TaskRow = TaskDto & { priorityLabel: string }
-
+// Tipos para as props
 interface TaskTableProps {
   data: TaskDto[]
+  // Novos dados para o "Lookup"
+  accounts: AccountDto[]
+  contacts: ContactDto[]
+  deals: DealDto[]
+  // ---
   loading: boolean
   error?: string | null
   onCreate: () => void
@@ -44,13 +47,23 @@ interface TaskTableProps {
   onDelete: (id: string) => void
 }
 
-export function TaskTable({ data, loading, error, onCreate, onEdit, onDelete }: TaskTableProps) {
+export function TaskTable({ data, accounts, contacts, deals, loading, error, onCreate, onEdit, onDelete }: TaskTableProps) {
   const [viewMode, setViewMode] = useState<"list" | "board">("list")
 
-  const rows: TaskRow[] = useMemo(() => data.map(t => ({ ...t, priorityLabel: t.priority })), [data])
+  // 1. CRIANDO OS LOOKUP MAPS (Performance: O(1) de acesso)
+  // Transformamos arrays em Maps onde a chave é o ID e o valor é o Nome
+  const lookups = useMemo(() => {
+    return {
+      accounts: new Map(accounts.map(a => [a.id, a.name])),
+      contacts: new Map(contacts.map(c => [c.id, [c.firstName, c.lastName].filter(Boolean).join(" ")])),
+      deals: new Map(deals.map(d => [d.id, d.name])),
+      // Mapeamento de donos (Owner)
+      // Como a API de tarefas retorna o ownerId, você poderia passar a lista de usuários aqui também.
+      // Por enquanto, vou simular uma formatação visual.
+    }
+  }, [accounts, contacts, deals])
 
-  // --- Helpers Visuais ---
-
+  // Helpers de Renderização
   const getPriorityIcon = (priority: string) => {
     switch (priority) {
       case "HIGH": return <ArrowUp size={14} className="text-red-500" />
@@ -79,41 +92,62 @@ export function TaskTable({ data, loading, error, onCreate, onEdit, onDelete }: 
     )
   }
 
-  // --- Definição das Colunas (Modo Lista) ---
+  // Componente Auxiliar para mostrar o Contexto (Conta, Negócio, Contato)
+  // Isso evita repetição de código na Lista e no Kanban
+  const TaskContextBadges = ({ task }: { task: TaskDto }) => {
+    const accountName = task.accountId ? lookups.accounts.get(task.accountId) : null
+    const dealName = task.dealId ? lookups.deals.get(task.dealId) : null
+    const contactName = task.contactId ? lookups.contacts.get(task.contactId) : null
 
-  const columns: Column<TaskRow>[] = [
+    if (!accountName && !dealName && !contactName) return null
+
+    return (
+      <div className="flex flex-wrap items-center gap-2 mt-1.5">
+        {dealName && (
+          <div className="flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200" title="Negócio">
+            <Briefcase size={10} />
+            <span className="truncate max-w-[120px]">{dealName}</span>
+          </div>
+        )}
+        {accountName && (
+          <div className="flex items-center gap-1 text-[10px] text-slate-500 border border-transparent px-1.5 py-0.5" title="Conta">
+            <Building2 size={10} />
+            <span className="truncate max-w-[120px]">{accountName}</span>
+          </div>
+        )}
+        {contactName && (
+          <div className="flex items-center gap-1 text-[10px] text-slate-500 border border-transparent px-1.5 py-0.5" title="Contato">
+            <User size={10} />
+            <span className="truncate max-w-[100px]">{contactName}</span>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // --- Colunas (Modo Lista) ---
+  const columns: Column<TaskDto>[] = [
     {
       key: "title",
-      header: "Tarefa",
-      className: "w-[350px]",
+      header: "Tarefa & Contexto",
+      className: "w-[400px]",
       render: (row) => (
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <div title={`Prioridade: ${row.priority}`} className="w-4 flex items-center justify-center">
-              {getPriorityIcon(row.priority)}
+        <div className="flex flex-col gap-0.5 py-1">
+          <div className="flex items-start gap-2">
+            <div title={`Prioridade: ${row.priority}`} className="mt-1">{getPriorityIcon(row.priority)}</div>
+            <div>
+                <span className={`font-medium text-sm ${row.status === 'DONE' ? 'text-slate-500 line-through decoration-slate-300' : 'text-slate-900'}`}>
+                    {row.title}
+                </span>
+                {row.description && (
+                    <p className="text-xs text-slate-500 line-clamp-1">{row.description}</p>
+                )}
             </div>
-            <span className={`font-medium ${row.status === 'DONE' ? 'text-slate-500 line-through decoration-slate-300' : 'text-slate-900'}`}>
-                {row.title}
-            </span>
           </div>
-          {/* Context Icons (Indicam vínculos) */}
-          <div className="flex items-center gap-3 pl-6">
-             {row.accountId && (
-               <span title="Vinculado a Conta" className="flex items-center">
-                 <Building2 size={12} className="text-slate-400" />
-               </span>
-             )}
-             {row.dealId && (
-               <span title="Vinculado a Negócio" className="flex items-center">
-                 <Briefcase size={12} className="text-slate-400" />
-               </span>
-             )}
-             {row.contactId && (
-               <span title="Vinculado a Contato" className="flex items-center">
-                 <User size={12} className="text-slate-400" />
-               </span>
-             )}
-             {row.description && <span className="text-xs text-slate-400 truncate max-w-[260px]">{row.description}</span>}
+          
+          {/* Aqui usamos o helper para mostrar os nomes reais */}
+          <div className="pl-6">
+            <TaskContextBadges task={row} />
           </div>
         </div>
       )
@@ -137,7 +171,7 @@ export function TaskTable({ data, loading, error, onCreate, onEdit, onDelete }: 
       key: "ownerId",
       header: "Resp.",
       render: () => (
-        <div className="h-6 w-6 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center text-[10px] font-bold border border-indigo-100">
+        <div className="h-6 w-6 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] font-bold border border-slate-200" title="Responsável">
             US
         </div>
       )
@@ -169,8 +203,7 @@ export function TaskTable({ data, loading, error, onCreate, onEdit, onDelete }: 
     },
   ]
 
-  // --- Renderização do Kanban (Modo Quadro) ---
-
+  // --- Kanban (Modo Quadro) ---
   const renderBoard = () => {
     const cols = [
         { id: "TODO", label: "A Fazer", icon: Circle, color: "text-slate-500" },
@@ -181,12 +214,11 @@ export function TaskTable({ data, loading, error, onCreate, onEdit, onDelete }: 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4 pb-10 overflow-x-auto">
             {cols.map(col => {
-                const tasksInCol = rows.filter(t => t.status === col.id)
+                const tasksInCol = data.filter(t => t.status === col.id)
                 const Icon = col.icon
                 
                 return (
                     <div key={col.id} className="flex flex-col gap-4">
-                        {/* Header da Coluna */}
                         <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                             <div className="flex items-center gap-2 font-medium text-slate-700">
                                 <Icon size={16} className={col.color} />
@@ -200,24 +232,21 @@ export function TaskTable({ data, loading, error, onCreate, onEdit, onDelete }: 
                             </Button>
                         </div>
 
-                        {/* Cards */}
-                        <div className="flex flex-col gap-3 min-h-[200px]">
+                        <div className="flex flex-col gap-3 min-h-[150px]">
                             {tasksInCol.map(task => (
-                                <div key={task.id} className="group relative bg-white p-3 rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer" onClick={() => onEdit(task.id)}>
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div className="flex items-center gap-2">
-                                            {getPriorityIcon(task.priority)}
-                                            <span className={`text-sm font-medium ${task.status === 'DONE' ? 'line-through text-slate-400' : 'text-slate-800'}`}>
-                                                {task.title}
-                                            </span>
-                                        </div>
+                                <div key={task.id} className="group relative bg-white p-3 rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer flex flex-col gap-2" onClick={() => onEdit(task.id)}>
+                                    
+                                    <div className="flex items-start gap-2">
+                                        <div className="mt-0.5">{getPriorityIcon(task.priority)}</div>
+                                        <span className={`text-sm font-medium leading-tight ${task.status === 'DONE' ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                                            {task.title}
+                                        </span>
                                     </div>
                                     
-                                    {task.description && (
-                                        <p className="text-xs text-slate-500 line-clamp-2 mb-3">{task.description}</p>
-                                    )}
+                                    {/* Mostra os nomes reais no Kanban também */}
+                                    <TaskContextBadges task={task} />
 
-                                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-50">
+                                    <div className="flex items-center justify-between mt-1 pt-2 border-t border-slate-50">
                                         <div className="flex items-center gap-2 text-xs text-slate-400">
                                             {task.dueDate && (
                                                 <div className={`flex items-center gap-1 ${new Date(task.dueDate) < new Date() && task.status !== 'DONE' ? 'text-red-500' : ''}`}>
@@ -226,8 +255,7 @@ export function TaskTable({ data, loading, error, onCreate, onEdit, onDelete }: 
                                                 </div>
                                             )}
                                         </div>
-                                        {/* Avatar Mini */}
-                                        <div className="h-5 w-5 rounded-full bg-slate-100 text-[9px] flex items-center justify-center text-slate-500 font-bold">
+                                        <div className="h-5 w-5 rounded-full bg-slate-100 text-[9px] flex items-center justify-center text-slate-500 font-bold border border-slate-200">
                                             US
                                         </div>
                                     </div>
@@ -246,15 +274,12 @@ export function TaskTable({ data, loading, error, onCreate, onEdit, onDelete }: 
     )
   }
 
-  // --- Wrapper Principal ---
-
   if (error) {
     return <div className="p-4 bg-red-50 text-red-600 text-sm rounded border border-red-200">{error}</div>
   }
 
   return (
     <div className="space-y-4">
-        {/* Header da Tabela com Switcher */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
                 <h2 className="text-lg font-semibold text-slate-900">Minhas Tarefas</h2>
@@ -274,12 +299,11 @@ export function TaskTable({ data, loading, error, onCreate, onEdit, onDelete }: 
             </div>
         </div>
 
-        {/* Renderização Condicional */}
         {viewMode === "list" ? (
             <DataTable
-                title="" // Título removido pois já está no header customizado acima
+                title=""
                 columns={columns}
-                data={rows}
+                data={data}
                 loading={loading}
                 empty={
                     <div className="text-center py-10">
