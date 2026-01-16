@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { CalendarIcon, DollarSign, Building2, User, PlusCircle } from "lucide-react"
 import type { CreateDealInput } from "@/hooks/use-crm-resources"
 import { normalizeString, toDateInputValue, type Option } from "../shared/utils"
 
@@ -27,6 +28,13 @@ export function DealForm({ initial, stages, accounts, contacts, loading, error, 
     setValues((prev) => ({ ...prev, [field]: event.target.value }))
   }
 
+  const handleSelectChange = (field: keyof CreateDealInput, value: string) => {
+    setValues((prev) => ({ 
+        ...prev, 
+        [field]: value === "__none" ? undefined : value 
+    }))
+  }
+
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     const amountNumber = values.amount === undefined || values.amount === null || values.amount === ("" as any)
@@ -46,72 +54,148 @@ export function DealForm({ initial, stages, accounts, contacts, loading, error, 
   }
 
   return (
-    <form className="space-y-3" onSubmit={submit}>
-      <div className="grid gap-3">
-        <div className="grid gap-1">
-          <Label htmlFor="deal-name">Nome</Label>
-          <Input id="deal-name" value={values.name} onChange={handleChange("name") as any} required />
+    <form className="space-y-6" onSubmit={submit}>
+      
+      {/* Seção Principal */}
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="deal-name" className="text-slate-600">Nome do Negócio</Label>
+          <Input 
+            id="deal-name" 
+            placeholder="Ex.: Implantação Sistema ERP" 
+            value={values.name} 
+            onChange={handleChange("name")} 
+            required 
+            className="h-11 text-base focus-visible:ring-emerald-500"
+          />
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="grid gap-1">
-            <Label>Etapa</Label>
-            <div className="flex gap-2 items-start">
-              <div className="flex-1">
-                <Select value={values.stageId ?? ""} onValueChange={(val) => setValues((prev) => ({ ...prev, stageId: val === "__none" ? "" : val }))}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none">Selecione</SelectItem>
-                    {stages.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="pt-2">
-                <Button size="sm" variant="outline" onClick={() => createStage && createStage()}>Criar etapa</Button>
-              </div>
-            </div>
-          </div>
-          <div className="grid gap-1">
-            <Label htmlFor="amount">Valor</Label>
-            <Input id="amount" type="number" step="0.01" value={values.amount?.toString() ?? ""} onChange={handleChange("amount") as any} />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="grid gap-1">
-            <Label htmlFor="currency">Moeda</Label>
-            <Input id="currency" value={values.currency ?? "BRL"} onChange={handleChange("currency") as any} />
-          </div>
-          <div className="grid gap-1">
-            <Label htmlFor="expectedClose">Fechamento esperado</Label>
-            <Input id="expectedClose" type="date" value={toDateInputValue(values.expectedClose)} onChange={handleChange("expectedClose") as any} />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="grid gap-1">
-            <Label>Conta</Label>
-            <Select value={values.accountId ?? ""} onValueChange={(val) => setValues((prev) => ({ ...prev, accountId: val === "__none" ? undefined : val }))}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecione" />
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          {/* Pipeline Stage */}
+          <div className="space-y-2">
+             <div className="flex items-center justify-between">
+                <Label className="text-slate-600">Etapa do Pipeline</Label>
+                {createStage && (
+                    <button 
+                        type="button" 
+                        onClick={createStage}
+                        className="text-xs text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-1 font-medium transition-colors"
+                    >
+                        <PlusCircle size={12} /> Nova etapa
+                    </button>
+                )}
+             </div>
+            <Select 
+                value={values.stageId ?? ""} 
+                onValueChange={(val) => handleSelectChange("stageId", val)}
+            >
+              <SelectTrigger className="focus:ring-emerald-500">
+                <SelectValue placeholder="Selecione a etapa" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none">Nenhum</SelectItem>
+                <SelectItem value="__none" className="text-slate-400">Selecione...</SelectItem>
+                {stages.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Data de Fechamento */}
+          <div className="space-y-2">
+            <Label htmlFor="expectedClose" className="text-slate-600 flex items-center gap-1">
+                <CalendarIcon size={14} className="text-slate-400" />
+                Fechamento Previsto
+            </Label>
+            <Input 
+                id="expectedClose" 
+                type="date" 
+                value={toDateInputValue(values.expectedClose)} 
+                onChange={handleChange("expectedClose")} 
+                className="focus-visible:ring-emerald-500"
+            />
+          </div>
+        </div>
+
+        {/* Valores Financeiros */}
+        <div className="grid gap-4 sm:grid-cols-3">
+             <div className="sm:col-span-2 space-y-2">
+                <Label htmlFor="amount" className="text-slate-600 flex items-center gap-1">
+                    <DollarSign size={14} className="text-slate-400" />
+                    Valor Estimado
+                </Label>
+                <div className="relative">
+                    <Input 
+                        id="amount" 
+                        type="number" 
+                        step="0.01" 
+                        placeholder="0,00"
+                        value={values.amount?.toString() ?? ""} 
+                        onChange={handleChange("amount")} 
+                        className="pl-9 focus-visible:ring-emerald-500 font-mono"
+                    />
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <Label htmlFor="currency" className="text-slate-600">Moeda</Label>
+                <Select 
+                    value={values.currency ?? "BRL"} 
+                    onValueChange={(val) => handleSelectChange("currency", val)}
+                >
+                    <SelectTrigger>
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="BRL">BRL (R$)</SelectItem>
+                        <SelectItem value="USD">USD ($)</SelectItem>
+                        <SelectItem value="EUR">EUR (€)</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+        </div>
+      </div>
+
+      <div className="border-t border-slate-100 my-4" />
+
+      {/* Relacionamentos (Contas e Contatos) */}
+      <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-4">
+        <h3 className="text-sm font-semibold text-slate-900 mb-2">Relacionamentos</h3>
+        
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label className="text-slate-600 flex items-center gap-2">
+                <Building2 size={14} /> Conta (Empresa)
+            </Label>
+            <Select 
+                value={values.accountId ?? ""} 
+                onValueChange={(val) => handleSelectChange("accountId", val)}
+            >
+              <SelectTrigger className="bg-white">
+                <SelectValue placeholder="Vincular empresa..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none" className="text-slate-400">Nenhuma</SelectItem>
                 {accounts.map((option) => (
                   <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <div className="grid gap-1">
-            <Label>Contato</Label>
-            <Select value={values.contactId ?? ""} onValueChange={(val) => setValues((prev) => ({ ...prev, contactId: val === "__none" ? undefined : val }))}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecione" />
+
+          <div className="space-y-2">
+            <Label className="text-slate-600 flex items-center gap-2">
+                <User size={14} /> Contato Principal
+            </Label>
+            <Select 
+                value={values.contactId ?? ""} 
+                onValueChange={(val) => handleSelectChange("contactId", val)}
+            >
+              <SelectTrigger className="bg-white">
+                <SelectValue placeholder="Vincular pessoa..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__none">Nenhum</SelectItem>
+                <SelectItem value="__none" className="text-slate-400">Nenhum</SelectItem>
                 {contacts.map((option) => (
                   <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                 ))}
@@ -120,11 +204,19 @@ export function DealForm({ initial, stages, accounts, contacts, loading, error, 
           </div>
         </div>
       </div>
-      {error ? <p className="text-sm text-rose-600">{error}</p> : null}
-      <div className="flex justify-end gap-2 pt-2">
-        <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
-        <Button type="submit" className="bg-emerald-500 hover:bg-emerald-600 text-white" disabled={loading}>
-          {loading ? "Salvando..." : "Salvar"}
+
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-100 rounded text-sm text-red-600">
+            {error}
+        </div>
+      )}
+
+      <div className="flex justify-end gap-3 pt-2">
+        <Button type="button" variant="ghost" onClick={onCancel} className="text-slate-600 hover:text-slate-900">
+            Cancelar
+        </Button>
+        <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm" disabled={loading}>
+          {loading ? "Salvando..." : "Criar Negócio"}
         </Button>
       </div>
     </form>
