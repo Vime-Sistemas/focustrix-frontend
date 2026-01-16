@@ -228,6 +228,27 @@ export function CrmPage({ selectedOrg, apiRequest }: CrmPageProps) {
     setFormLoading(false)
   }
 
+  const [stageDialogOpen, setStageDialogOpen] = useState(false)
+  const [stageFormLoading, setStageFormLoading] = useState(false)
+  const [stageFormError, setStageFormError] = useState<string | null>(null)
+
+  const createStageInline = () => setStageDialogOpen(true)
+
+  const handleCreateStage = async (name: string) => {
+    if (!name || name.trim().length === 0) return
+    setStageFormLoading(true)
+    setStageFormError(null)
+    try {
+      await apiRequest({ url: "/pipeline-stages", method: "POST", data: { name: name.trim(), order: stagesQuery.data.length + 1 } }, { withOrg: true })
+      await stagesQuery.refetch()
+      setStageDialogOpen(false)
+    } catch (err) {
+      setStageFormError(err instanceof Error ? err.message : "Falha ao criar etapa")
+    } finally {
+      setStageFormLoading(false)
+    }
+  }
+
   const handleDelete = async (type: NavValue, id: string) => {
     const confirmed = window.confirm("Tem certeza que deseja excluir?")
     if (!confirmed) return
@@ -400,6 +421,7 @@ export function CrmPage({ selectedOrg, apiRequest }: CrmPageProps) {
                 <DealForm
                   initial={toDealInitial(activeDeal)}
                   stages={stageOptions}
+                  createStage={createStageInline}
                   accounts={accountOptions}
                   contacts={contactOptions}
                   loading={formLoading}
@@ -423,6 +445,22 @@ export function CrmPage({ selectedOrg, apiRequest }: CrmPageProps) {
               )}
             </>
           ) : null}
+          <DialogFooter />
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={stageDialogOpen} onOpenChange={(open) => (!open ? setStageDialogOpen(false) : null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Criar etapa</DialogTitle>
+            <DialogDescription>Adicione uma nova etapa ao pipeline.</DialogDescription>
+          </DialogHeader>
+          <StageForm
+            loading={stageFormLoading}
+            error={stageFormError}
+            onSubmit={async (name) => await handleCreateStage(name)}
+            onCancel={() => setStageDialogOpen(false)}
+          />
           <DialogFooter />
         </DialogContent>
       </Dialog>
@@ -599,12 +637,12 @@ function ContactForm({ initial, accounts, loading, error, onSubmit, onCancel }: 
           </div>
           <div className="grid gap-1">
             <Label>Conta</Label>
-            <Select value={values.accountId ?? ""} onValueChange={(val) => setValues((prev) => ({ ...prev, accountId: val || undefined }))}>
+            <Select value={values.accountId ?? ""} onValueChange={(val) => setValues((prev) => ({ ...prev, accountId: val === "__none" ? undefined : val }))}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="__none">Nenhum</SelectItem>
                 {accounts.map((option) => (
                   <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                 ))}
@@ -624,7 +662,7 @@ function ContactForm({ initial, accounts, loading, error, onSubmit, onCancel }: 
   )
 }
 
-function DealForm({ initial, stages, accounts, contacts, loading, error, onSubmit, onCancel }: {
+function DealForm({ initial, stages, accounts, contacts, loading, error, onSubmit, onCancel, createStage }: {
   initial: CreateDealInput
   stages: Option[]
   accounts: Option[]
@@ -633,6 +671,7 @@ function DealForm({ initial, stages, accounts, contacts, loading, error, onSubmi
   error: string | null
   onSubmit: (values: CreateDealInput) => Promise<void>
   onCancel: () => void
+  createStage?: () => void
 }) {
   const [values, setValues] = useState<CreateDealInput>(initial)
 
@@ -670,17 +709,25 @@ function DealForm({ initial, stages, accounts, contacts, loading, error, onSubmi
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="grid gap-1">
             <Label>Etapa</Label>
-            <Select value={values.stageId ?? ""} onValueChange={(val) => setValues((prev) => ({ ...prev, stageId: val }))}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Selecione" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Selecione</SelectItem>
-                {stages.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2 items-start">
+              <div className="flex-1">
+                <Select value={values.stageId ?? ""} onValueChange={(val) => setValues((prev) => ({ ...prev, stageId: val === "__none" ? "" : val }))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Selecione</SelectItem>
+                    {stages.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="pt-2">
+                <Button size="sm" variant="outline" onClick={() => createStage && createStage()}>Criar etapa</Button>
+              </div>
+            </div>
+            
           </div>
           <div className="grid gap-1">
             <Label htmlFor="amount">Valor</Label>
@@ -700,12 +747,12 @@ function DealForm({ initial, stages, accounts, contacts, loading, error, onSubmi
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="grid gap-1">
             <Label>Conta</Label>
-            <Select value={values.accountId ?? ""} onValueChange={(val) => setValues((prev) => ({ ...prev, accountId: val || undefined }))}>
+            <Select value={values.accountId ?? ""} onValueChange={(val) => setValues((prev) => ({ ...prev, accountId: val === "__none" ? undefined : val }))}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="__none">Nenhum</SelectItem>
                 {accounts.map((option) => (
                   <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                 ))}
@@ -714,12 +761,12 @@ function DealForm({ initial, stages, accounts, contacts, loading, error, onSubmi
           </div>
           <div className="grid gap-1">
             <Label>Contato</Label>
-            <Select value={values.contactId ?? ""} onValueChange={(val) => setValues((prev) => ({ ...prev, contactId: val || undefined }))}>
+            <Select value={values.contactId ?? ""} onValueChange={(val) => setValues((prev) => ({ ...prev, contactId: val === "__none" ? undefined : val }))}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="__none">Nenhum</SelectItem>
                 {contacts.map((option) => (
                   <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                 ))}
@@ -819,12 +866,12 @@ function TaskForm({ initial, accounts, contacts, deals, loading, error, onSubmit
           </div>
           <div className="grid gap-1">
             <Label>Negócio</Label>
-            <Select value={values.dealId ?? ""} onValueChange={(val) => setValues((prev) => ({ ...prev, dealId: val || undefined }))}>
+            <Select value={values.dealId ?? ""} onValueChange={(val) => setValues((prev) => ({ ...prev, dealId: val === "__none" ? undefined : val }))}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="__none">Nenhum</SelectItem>
                 {deals.map((option) => (
                   <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                 ))}
@@ -835,12 +882,12 @@ function TaskForm({ initial, accounts, contacts, deals, loading, error, onSubmit
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="grid gap-1">
             <Label>Conta</Label>
-            <Select value={values.accountId ?? ""} onValueChange={(val) => setValues((prev) => ({ ...prev, accountId: val || undefined }))}>
+            <Select value={values.accountId ?? ""} onValueChange={(val) => setValues((prev) => ({ ...prev, accountId: val === "__none" ? undefined : val }))}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="__none">Nenhum</SelectItem>
                 {accounts.map((option) => (
                   <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                 ))}
@@ -849,12 +896,12 @@ function TaskForm({ initial, accounts, contacts, deals, loading, error, onSubmit
           </div>
           <div className="grid gap-1">
             <Label>Contato</Label>
-            <Select value={values.contactId ?? ""} onValueChange={(val) => setValues((prev) => ({ ...prev, contactId: val || undefined }))}>
+            <Select value={values.contactId ?? ""} onValueChange={(val) => setValues((prev) => ({ ...prev, contactId: val === "__none" ? undefined : val }))}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="__none">Nenhum</SelectItem>
                 {contacts.map((option) => (
                   <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                 ))}
@@ -920,3 +967,32 @@ const toTaskInitial = (item?: { title: string; description: string | null; statu
   contactId: item?.contactId ?? undefined,
   dealId: item?.dealId ?? undefined,
 })
+
+function StageForm({ loading, error, onSubmit, onCancel }: { loading: boolean; error: string | null; onSubmit: (name: string) => Promise<void>; onCancel: () => void }) {
+  const [name, setName] = useState("")
+
+  useEffect(() => {
+    setName("")
+  }, [])
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault()
+    await onSubmit(name)
+  }
+
+  return (
+    <form className="space-y-3" onSubmit={submit}>
+      <div className="grid gap-2">
+        <div className="grid gap-1">
+          <Label htmlFor="stage-name">Nome da etapa</Label>
+          <Input id="stage-name" value={name} onChange={(e) => setName(e.target.value)} required />
+        </div>
+      </div>
+      {error ? <p className="text-sm text-rose-600">{error}</p> : null}
+      <div className="flex justify-end gap-2 pt-2">
+        <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
+        <Button type="submit" className="bg-emerald-500 hover:bg-emerald-600 text-white" disabled={loading}>{loading ? "Salvando..." : "Salvar"}</Button>
+      </div>
+    </form>
+  )
+}
