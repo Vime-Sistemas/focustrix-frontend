@@ -19,7 +19,7 @@ interface AppShellProps extends PropsWithChildren {
 
 export function AppShell({ navItems, active, onNavChange, onQuickCreate, children }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900">
+    <div className="min-h-screen bg-white text-slate-900">
       <header className="border-b border-[var(--color-border)] bg-white/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3">
@@ -48,7 +48,7 @@ export function AppShell({ navItems, active, onNavChange, onQuickCreate, childre
         <Tabs value={active} onValueChange={onNavChange} className="w-full">
           <TabsList className="bg-white shadow-sm border border-[var(--color-border)]">
             {navItems.map((item) => (
-              <TabsTrigger key={item.value} value={item.value} className="data-[state=active]:text-emerald-700">
+              <TabsTrigger key={item.value} value={item.value} className="text-emerald-500">
                 {item.label}
               </TabsTrigger>
             ))}

@@ -7,9 +7,11 @@ import { Button } from "@/components/ui/button"
 interface OrgCreatePageProps {
   onCreate: (name: string, domain?: string) => void
   onBack: () => void
+  loading?: boolean
+  error?: string
 }
 
-export function OrgCreatePage({ onCreate, onBack }: OrgCreatePageProps) {
+export function OrgCreatePage({ onCreate, onBack, loading, error }: OrgCreatePageProps) {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
@@ -37,11 +39,12 @@ export function OrgCreatePage({ onCreate, onBack }: OrgCreatePageProps) {
                 <Label htmlFor="org-domain">Dominio (opcional)</Label>
                 <Input id="org-domain" name="domain" placeholder="empresa.com" />
               </div>
-              <Button type="submit" className="w-full">
+              {error && <p className="text-sm text-slate-600">{error}</p>}
+              <Button type="submit" className="w-full" disabled={loading}>
                 Criar e entrar
               </Button>
             </form>
-            <Button variant="outline" className="w-full" onClick={onBack}>
+            <Button variant="outline" className="w-full" onClick={onBack} disabled={loading}>
               Voltar
             </Button>
           </CardContent>

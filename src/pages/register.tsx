@@ -1,20 +1,36 @@
 import type { FormEvent } from "react"
+import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 
 interface RegisterPageProps {
-  onRegister: (email: string) => void
+  onRegister: (email: string, password: string) => Promise<void> | void
   onGoLogin: () => void
+  loading?: boolean
+  error?: string
 }
 
-export function RegisterPage({ onRegister, onGoLogin }: RegisterPageProps) {
+export function RegisterPage({ onRegister, onGoLogin, loading, error }: RegisterPageProps) {
+  const [localError, setLocalError] = useState<string | null>(null)
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     const email = String(form.get("email") || "")
-    onRegister(email)
+    const password = String(form.get("password") || "")
+    const confirm = String(form.get("confirmPassword") || "")
+
+    if (password !== confirm) {
+      setLocalError("As senhas nao coincidem")
+      return
+    }
+
+    Promise.resolve(onRegister(email, password)).catch((err) => {
+      const message = err instanceof Error ? err.message : "Falha ao cadastrar"
+      setLocalError(message)
+    })
   }
 
   return (
@@ -48,7 +64,10 @@ export function RegisterPage({ onRegister, onGoLogin }: RegisterPageProps) {
                 <Label htmlFor="confirm-password">Confirmar senha</Label>
                 <Input id="confirm-password" name="confirmPassword" type="password" required placeholder="••••••••" />
               </div>
-              <Button type="submit" className="w-full">
+              {(error || localError) && (
+                <p className="text-sm text-slate-600">{error ?? localError}</p>
+              )}
+              <Button type="submit" className="w-full" disabled={loading}>
                 Continuar
               </Button>
             </form>

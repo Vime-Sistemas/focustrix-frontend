@@ -7,11 +7,12 @@ export type Org = { id: string; name: string; role: "OWNER" | "ADMIN" | "MEMBER"
 interface OrgSelectPageProps {
   orgs: Org[]
   loading: boolean
+  error?: string
   onSelect: (orgId: string) => void
   onCreateNew: () => void
 }
 
-export function OrgSelectPage({ orgs, loading, onSelect, onCreateNew }: OrgSelectPageProps) {
+export function OrgSelectPage({ orgs, loading, error, onSelect, onCreateNew }: OrgSelectPageProps) {
   return (
     <div className="min-h-screen bg-white">
       <div className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center px-6 py-12">
@@ -20,6 +21,8 @@ export function OrgSelectPage({ orgs, loading, onSelect, onCreateNew }: OrgSelec
           <h1 className="text-2xl font-semibold text-slate-900">Onde voce quer trabalhar?</h1>
           <p className="text-sm text-slate-600">Escolha uma das organizacoes ou crie uma nova.</p>
         </div>
+
+        {error && <p className="mb-4 text-sm text-slate-600">{error}</p>}
 
         <div className="grid gap-4 md:grid-cols-2">
           {loading

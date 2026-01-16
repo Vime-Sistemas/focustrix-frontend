@@ -1,20 +1,34 @@
 import type { FormEvent } from "react"
+import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 
 interface LoginPageProps {
-  onLogin: (email: string) => void
+  onLogin: (email: string, password: string) => Promise<void> | void
   onGoRegister: () => void
+  loading?: boolean
+  error?: string
 }
 
-export function LoginPage({ onLogin, onGoRegister }: LoginPageProps) {
+export function LoginPage({ onLogin, onGoRegister, loading, error }: LoginPageProps) {
+  const [localError, setLocalError] = useState<string | null>(null)
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     const email = String(form.get("email") || "")
-    onLogin(email)
+    const password = String(form.get("password") || "")
+    setLocalError(null)
+    if (!password) {
+      setLocalError("Informe a senha")
+      return
+    }
+    Promise.resolve(onLogin(email, password)).catch((err) => {
+      const message = err instanceof Error ? err.message : "Falha ao entrar"
+      setLocalError(message)
+    })
   }
 
   return (
@@ -40,7 +54,10 @@ export function LoginPage({ onLogin, onGoRegister }: LoginPageProps) {
                 <Label htmlFor="password">Senha</Label>
                 <Input id="password" name="password" type="password" required placeholder="••••••••" />
               </div>
-              <Button type="submit" className="w-full">
+              {(error || localError) && (
+                <p className="text-sm text-slate-600">{error ?? localError}</p>
+              )}
+              <Button type="submit" className="w-full" disabled={loading}>
                 Entrar
               </Button>
             </form>
