@@ -56,6 +56,13 @@
 
 :root {
   color-scheme: light;
+  /* Define surface tokens to avoid transparent backgrounds on components (e.g., dialogs). */
+  --background: #ffffff;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
 }
 
 * {

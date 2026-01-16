@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { type AxiosRequestConfig } from "axios";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CrmPage } from "@/pages/crm";
 import { LoginPage } from "@/pages/login";
@@ -99,7 +99,7 @@ function App() {
 
   const apiRequest: ApiRequest = useCallback(
     async <T,>(
-      config: Parameters<typeof api.request>[0],
+      config: AxiosRequestConfig,
       options?: { withOrg?: boolean; retrying?: boolean; tokenOverride?: string | null },
     ): Promise<T> => {
       const headers = {

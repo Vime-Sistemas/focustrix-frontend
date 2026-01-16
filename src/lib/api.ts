@@ -7,6 +7,6 @@ export type ApiRequestOptions = {
 }
 
 export type ApiRequest = <T,>(
-  config: AxiosRequestConfig<T>,
+  config: AxiosRequestConfig,
   options?: ApiRequestOptions,
 ) => Promise<T>
