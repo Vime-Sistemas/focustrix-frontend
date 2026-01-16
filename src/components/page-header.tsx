@@ -1,4 +1,4 @@
-import { PropsWithChildren, ReactNode } from "react"
+import type { PropsWithChildren, ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
