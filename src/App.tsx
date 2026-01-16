@@ -1,10 +1,11 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CrmPage } from "@/pages/crm";
 import { LoginPage } from "@/pages/login";
 import { OrgCreatePage } from "@/pages/org-create";
 import { OrgSelectPage, type Org } from "@/pages/org-select";
 import { RegisterPage } from "@/pages/register";
+import type { ApiRequest } from "@/lib/api";
 
 import "./App.css";
 
@@ -34,45 +35,52 @@ function App() {
   const [orgCreateError, setOrgCreateError] = useState<string | null>(null);
   const isAuthenticated = Boolean(accessToken && user);
 
-  const api = axios.create({
-    baseURL: API_BASE,
-    headers: { "Content-Type": "application/json" },
-  });
+  const api = useMemo(
+    () =>
+      axios.create({
+        baseURL: API_BASE,
+        headers: { "Content-Type": "application/json" },
+      }),
+    [],
+  );
 
-  const persistTokens = (access: string | null, refresh: string | null) => {
+  const persistTokens = useCallback((access: string | null, refresh: string | null) => {
     setAccessToken(access);
     setRefreshToken(refresh);
     if (access) localStorage.setItem(STORAGE_KEYS.access, access);
     else localStorage.removeItem(STORAGE_KEYS.access);
     if (refresh) localStorage.setItem(STORAGE_KEYS.refresh, refresh);
     else localStorage.removeItem(STORAGE_KEYS.refresh);
-  };
+  }, []);
 
-  const persistOrg = (orgId?: string) => {
+  const persistOrg = useCallback((orgId?: string) => {
     setSelectedOrg(orgId);
     if (orgId) localStorage.setItem(STORAGE_KEYS.org, orgId);
     else localStorage.removeItem(STORAGE_KEYS.org);
-  };
+  }, []);
 
-  const clearAuth = () => {
+  const clearAuth = useCallback(() => {
     persistTokens(null, null);
     persistOrg(undefined);
     setUser(null);
     setStage("login");
-  };
+  }, [persistTokens, persistOrg]);
 
-  const authHeaders = (tokenOverride?: string | null, withOrg?: boolean) => {
-    const headers: Record<string, string> = {};
-    const token = tokenOverride ?? accessToken;
-    if (token) headers.Authorization = `Bearer ${token}`;
-    if (withOrg) {
-      if (!selectedOrg) throw new Error("Selecione uma organizacao primeiro");
-      headers["x-org-id"] = selectedOrg;
-    }
-    return headers;
-  };
+  const authHeaders = useCallback(
+    (tokenOverride?: string | null, withOrg?: boolean) => {
+      const headers: Record<string, string> = {};
+      const token = tokenOverride ?? accessToken;
+      if (token) headers.Authorization = `Bearer ${token}`;
+      if (withOrg) {
+        if (!selectedOrg) throw new Error("Selecione uma organizacao primeiro");
+        headers["x-org-id"] = selectedOrg;
+      }
+      return headers;
+    },
+    [accessToken, selectedOrg],
+  );
 
-  const refreshAccessToken = async () => {
+  const refreshAccessToken = useCallback(async () => {
     if (!refreshToken) return false;
     try {
       const { data } = await api.post<{
@@ -85,48 +93,45 @@ function App() {
       return true;
     } catch (error) {
       clearAuth();
-      return error;
+      return false;
     }
-  };
+  }, [api, clearAuth, persistTokens, refreshToken]);
 
-  const apiRequest = async <T,>(
-    config: Parameters<typeof api.request>[0],
-    options?: {
-      withOrg?: boolean;
-      retrying?: boolean;
-      tokenOverride?: string | null;
-    },
-  ): Promise<T> => {
-    const headers = {
-      ...(config.headers as Record<string, string> | undefined),
-      ...authHeaders(options?.tokenOverride ?? undefined, options?.withOrg),
-    };
+  const apiRequest: ApiRequest = useCallback(
+    async <T,>(
+      config: Parameters<typeof api.request>[0],
+      options?: { withOrg?: boolean; retrying?: boolean; tokenOverride?: string | null },
+    ): Promise<T> => {
+      const headers = {
+        ...(config.headers as Record<string, string> | undefined),
+        ...authHeaders(options?.tokenOverride ?? undefined, options?.withOrg),
+      };
 
-    try {
-      const response = await api.request<T>({ ...config, headers });
-      return response.data;
-    } catch (error) {
-      const status = axios.isAxiosError(error)
-        ? error.response?.status
-        : undefined;
+      try {
+        const response = await api.request<T>({ ...config, headers });
+        return response.data;
+      } catch (error) {
+        const status = axios.isAxiosError(error) ? error.response?.status : undefined;
 
-      if (status === 401 && !options?.retrying) {
-        const refreshed = await refreshAccessToken();
-        if (refreshed) {
-          return apiRequest<T>(config, { ...options, retrying: true });
+        if (status === 401 && !options?.retrying) {
+          const refreshed = await refreshAccessToken();
+          if (refreshed) {
+            return apiRequest<T>(config, { ...options, retrying: true });
+          }
         }
-      }
 
-      if (axios.isAxiosError(error)) {
-        const message =
-          (error.response?.data as { message?: string } | undefined)?.message ||
-          error.message ||
-          `Erro ao chamar ${String(config.url)}`;
-        throw new Error(message);
+        if (axios.isAxiosError(error)) {
+          const message =
+            (error.response?.data as { message?: string } | undefined)?.message ||
+            error.message ||
+            `Erro ao chamar ${String(config.url)}`;
+          throw new Error(message);
+        }
+        throw error;
       }
-      throw error;
-    }
-  };
+    },
+    [api, authHeaders, refreshAccessToken],
+  );
 
   const loadOrgs = async (tokenOverride?: string) => {
     setOrgsLoading(true);
@@ -327,7 +332,7 @@ function App() {
     );
   }
 
-  return <CrmPage selectedOrg={selectedOrg} />;
+  return <CrmPage selectedOrg={selectedOrg} apiRequest={apiRequest} />;
 }
 
 export default App;

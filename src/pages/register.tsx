@@ -1,6 +1,6 @@
 import type { FormEvent } from "react"
 import { useState } from "react"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -23,65 +23,87 @@ export function RegisterPage({ onRegister, onGoLogin, loading, error }: Register
     const confirm = String(form.get("confirmPassword") || "")
 
     if (password !== confirm) {
-      setLocalError("As senhas nao coincidem")
+      setLocalError("As senhas não coincidem.")
       return
     }
 
+    if (password.length < 6) {
+        setLocalError("A senha deve ter pelo menos 6 caracteres.")
+        return
+    }
+
     Promise.resolve(onRegister(email, password)).catch((err) => {
-      const message = err instanceof Error ? err.message : "Falha ao cadastrar"
+      const message = err instanceof Error ? err.message : "Não foi possível criar a conta."
       setLocalError(message)
     })
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-12">
-        <div className="mb-8 flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-sm font-semibold">
-            Fx
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-tight text-slate-500">Focustrix</p>
-            <h1 className="text-xl font-semibold text-slate-900">Criar conta</h1>
-          </div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8">
+        <div className="flex flex-col items-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded bg-emerald-500 text-white shadow-md">
+                <span className="font-bold text-lg">Fx</span>
+            </div>
+            <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-slate-900">
+                Crie sua conta
+            </h2>
+            <p className="mt-2 text-center text-sm text-slate-600">
+                Comece a gerenciar seus negócios com inteligência.
+            </p>
         </div>
-        <Card>
-          <CardContent className="space-y-4 p-6">
+
+        <Card className="border-slate-200 shadow-md">
+          <CardContent className="space-y-6 pt-6">
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-2">
-                <Label htmlFor="name">Nome</Label>
-                <Input id="name" name="name" required placeholder="Seu nome" />
+                <Label htmlFor="name">Nome completo</Label>
+                <Input id="name" name="name" required placeholder="Ex: João Silva" className="focus-visible:ring-emerald-500" />
               </div>
+              
               <div className="space-y-2">
-                <Label htmlFor="email-register">Email</Label>
-                <Input id="email-register" name="email" type="email" required placeholder="voce@empresa.com" />
+                <Label htmlFor="email-register">Email profissional</Label>
+                <Input id="email-register" name="email" type="email" required placeholder="voce@empresa.com" className="focus-visible:ring-emerald-500" />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password-register">Senha</Label>
-                <Input id="password-register" name="password" type="password" required placeholder="••••••••" />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="password-register">Senha</Label>
+                    <Input id="password-register" name="password" type="password" required placeholder="******" className="focus-visible:ring-emerald-500" />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirmar</Label>
+                    <Input id="confirm-password" name="confirmPassword" type="password" required placeholder="******" className="focus-visible:ring-emerald-500" />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirmar senha</Label>
-                <Input id="confirm-password" name="confirmPassword" type="password" required placeholder="••••••••" />
-              </div>
+
               {(error || localError) && (
-                <p className="text-sm text-slate-600">{error ?? localError}</p>
+                <div className="text-sm text-red-600 bg-red-50 p-2 rounded border border-red-100">
+                    {error ?? localError}
+                </div>
               )}
-              <Button type="submit" className="w-full" disabled={loading}>
-                Continuar
+
+              <div className="text-xs text-slate-500 leading-relaxed">
+                Ao clicar em "Criar conta", você concorda com nossos <a href="#" className="underline hover:text-emerald-600">Termos de Serviço</a> e <a href="#" className="underline hover:text-emerald-600">Política de Privacidade</a>.
+              </div>
+
+              <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white" disabled={loading}>
+                {loading ? "Criando conta..." : "Criar conta"}
               </Button>
             </form>
+          </CardContent>
+          <CardFooter className="justify-center border-t border-slate-100 py-4 bg-slate-50/50 rounded-b-lg">
             <div className="text-sm text-slate-600">
-              Ja tem conta?{" "}
+              Já possui cadastro?{" "}
               <button
                 type="button"
-                className="font-semibold text-emerald-600"
+                className="font-semibold text-emerald-600 hover:text-emerald-500"
                 onClick={onGoLogin}
               >
-                Entrar
+                Fazer login
               </button>
             </div>
-          </CardContent>
+          </CardFooter>
         </Card>
       </div>
     </div>
